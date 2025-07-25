@@ -3,6 +3,8 @@ let player;
 let cursors;
 let jumpCount = 0; // Initialize jump count
 
+let npcs;
+
 export default class IntroScene extends Phaser.Scene {
     preload() {
         this.load.image('background', 'assets/background.png');
@@ -17,9 +19,9 @@ export default class IntroScene extends Phaser.Scene {
 
         platforms.create(540, 720, 'ground').setScale(2).refreshBody();
 
-        platforms.create(1100, 600, 'ground');
+        platforms.create(20, 600, 'ground');
 
-        player = this.physics.add.sprite(100, 600, 'dude');
+        player = this.physics.add.sprite(100, 300, 'dude');
 
         player.setBounce(0.2);
         player.setGravityY(400)
@@ -47,7 +49,31 @@ export default class IntroScene extends Phaser.Scene {
 
         cursors = this.input.keyboard.createCursorKeys();
 
+        npcs = this.physics.add.group();
+
+        for (let i = 0; i < 5; i++) {
+            const npc = npcs.create(Phaser.Math.Between(100, 900), 0, 'dude');
+            npc.setBounce(0.8);
+            npc.setCollideWorldBounds(true);
+            npc.setVelocityX(Phaser.Math.Between(-100, 100));
+            npc.setGravityY(600);
+
+            const dir = Phaser.Math.Between(0, 1) === 0 ? -1 : 1
+            const speed = Phaser.Math.Between(50, 100) * dir
+            npc.setVelocityX(speed)
+            npc.anims.play(dir === -1 ? 'left' : 'right', true)
+        }
+
         this.physics.add.collider(player, platforms);
+        this.physics.add.collider(npcs, platforms);
+
+        function dies (player, npc)
+        {
+            player.disableBody(true, true);
+            player.enableBody(true, 100, 300, true, true);
+        }
+
+        this.physics.add.overlap(player, npcs, dies, null, this);
     }
 
     update() {
@@ -74,5 +100,33 @@ export default class IntroScene extends Phaser.Scene {
         if (player.body.touching.down) {
             jumpCount = 0
         }
+
+        npcs.children.iterate((npc) => {
+            // 1. Flip direction on wall collision
+            if (npc.body.blocked.left) {
+                npc.setVelocityX(Phaser.Math.Between(50, 100))
+                npc.anims.play('right', true)
+            } else if (npc.body.blocked.right) {
+                npc.setVelocityX(Phaser.Math.Between(-100, -50))
+                npc.anims.play('left', true)
+            }
+
+            // 2. Random Jumping
+            const isOnGround = npc.body.blocked.down || npc.body.touching.down
+
+            if (isOnGround && Phaser.Math.Between(0, 300) === 0) {
+                npc.setVelocityY(-Phaser.Math.Between(250, 350))
+                npc.anims.play('turn') // Use the standing frame during jump
+            }
+
+            // 3. Restore walking animation when back on ground
+            if (isOnGround && npc.anims.currentAnim?.key === 'turn') {
+                if (npc.body.velocity.x < 0) {
+                    npc.anims.play('left', true)
+                } else {
+                    npc.anims.play('right', true)
+                }
+            }
+        });
     }
 }

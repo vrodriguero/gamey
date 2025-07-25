@@ -1,5 +1,6 @@
 import Phaser from 'phaser'
 import IntroScene from './scenes/IntroScene'
+import ScreamGameScene from './scenes/ScreamGameScene'
 
 const config = {
     type: Phaser.AUTO,
@@ -14,7 +15,7 @@ const config = {
     },
     backgroundColor: '#1d1d1d',
     parent: 'phaser-container', // this will be the div ID in your component
-    scene: [IntroScene],
+    scene: [ScreamGameScene],
 }
 
 let game = null
